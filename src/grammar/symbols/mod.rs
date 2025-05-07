@@ -1,6 +1,6 @@
 use epsilon::Epsilon;
 use non_terminal::NonTerminal;
-use terminal::Terminal;
+use terminal::ByteTerminal;
 
 use super::{Grammar, StrRepr};
 
@@ -8,12 +8,11 @@ pub mod epsilon;
 pub mod non_terminal;
 pub mod refs;
 pub mod terminal;
-pub mod trie;
 
 pub enum Symbol {
     Epsilon(Epsilon),
     NonTerminal(NonTerminal),
-    Terminal(Terminal),
+    Terminal(ByteTerminal),
 }
 
 impl Symbol {

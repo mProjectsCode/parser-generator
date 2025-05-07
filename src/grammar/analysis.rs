@@ -41,7 +41,7 @@ pub fn first(
     word: &[SymbolRef],
     grammar: &Grammar,
     mut visited: &mut HashSet<NonTerminalRef>,
-) -> HashSet<TerminalRef> {
+) -> HashSet<u8> {
     let mut first_set = HashSet::new();
 
     for symbol in word.iter() {
@@ -50,7 +50,7 @@ pub fn first(
                 continue;
             }
             SymbolRef::Terminal(t) => {
-                first_set.insert(t.clone());
+                first_set.extend(t.deref(grammar).first_bytes());
                 break;
             }
             SymbolRef::NonTerminal(nt_ref) => {
@@ -82,7 +82,7 @@ pub fn follow(
     nt: &NonTerminalRef,
     grammar: &Grammar,
     mut visited: &mut HashSet<NonTerminalRef>,
-) -> HashSet<TerminalRef> {
+) -> HashSet<u8> {
     let mut follow_set = HashSet::new();
 
     for rule in &grammar.rules {
@@ -113,7 +113,7 @@ pub fn follow(
 /// derived from the rule. It contains at least the FIRST set of the rule's RHS.
 /// If the rule's RHS can derive epsilon, it also contains the FOLLOW set of the
 /// rule's LHS.
-pub fn predict(rule: &Rule, grammar: &Grammar) -> HashSet<TerminalRef> {
+pub fn predict(rule: &Rule, grammar: &Grammar) -> HashSet<u8> {
     let mut predict = first(rule.rhs.as_slice(), grammar, &mut HashSet::new());
 
     if eps(rule.rhs.as_slice(), grammar, &mut HashSet::new()) {

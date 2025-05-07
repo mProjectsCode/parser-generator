@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use symbols::{
     non_terminal::NonTerminal,
     refs::{NonTerminalRef, SymbolRef, TerminalRef},
-    terminal::Terminal,
+    terminal::{ByteTerminal, TerminalLike},
 };
 
 pub mod analysis;
@@ -115,7 +115,7 @@ impl StrRepr for Rule {
 
 pub struct Grammar {
     pub start: Option<NonTerminalRef>,
-    pub terminals: Vec<Terminal>,
+    pub terminals: Vec<Box<dyn TerminalLike>>,
     pub non_terminals: Vec<NonTerminal>,
     pub rules: Vec<Rule>,
 }
@@ -136,12 +136,12 @@ impl Grammar {
         self.rules.push(rule);
     }
 
-    pub fn add_terminal(&mut self, terminal: Terminal) -> TerminalRef {
-        if self.has_symbol_with_name(&terminal.name) {
-            panic!("Symbol with name {} already exists", terminal.name);
+    pub fn add_terminal(&mut self, terminal: impl TerminalLike + 'static) -> TerminalRef {
+        if self.has_symbol_with_name(&terminal.name()) {
+            panic!("Symbol with name {} already exists", terminal.name());
         }
 
-        self.terminals.push(terminal);
+        self.terminals.push(Box::new(terminal));
         TerminalRef::new(self.terminals.len() - 1)
     }
 
@@ -165,19 +165,25 @@ impl Grammar {
     pub fn repr(&self) -> String {
         format!(
             "Grammar:\n  start: {}\n  terminals: {}\n  non_terminals: {}\n  rules:\n{}",
-            match self.start { 
-                Some(nt_ref) => nt_ref.deref(self).repr(self), 
-                None => "/".to_string()
+            match self.start {
+                Some(nt_ref) => nt_ref.deref(self).repr(self),
+                None => "/".to_string(),
             },
             self.terminals
                 .iter()
                 .map(|t| t.repr(self))
-                .collect::<Vec<_>>().join(", "),
+                .collect::<Vec<_>>()
+                .join(", "),
             self.non_terminals
                 .iter()
                 .map(|nt| nt.repr(self))
-                .collect::<Vec<_>>().join(", "),
-            self.rules.iter().map(|r| format!("    {}", r.repr(self))).collect::<Vec<_>>().join("\n")
+                .collect::<Vec<_>>()
+                .join(", "),
+            self.rules
+                .iter()
+                .map(|r| format!("    {}", r.repr(self)))
+                .collect::<Vec<_>>()
+                .join("\n")
         )
     }
 
@@ -185,7 +191,7 @@ impl Grammar {
         self.start.map(|nt_ref| nt_ref.deref(self))
     }
 
-    pub fn get_terminal(&self, index: usize) -> Option<&Terminal> {
+    pub fn get_terminal(&self, index: usize) -> Option<&Box<dyn TerminalLike>> {
         self.terminals.get(index)
     }
 
@@ -194,7 +200,7 @@ impl Grammar {
     }
 
     pub fn has_terminal_with_name(&self, name: &str) -> bool {
-        self.terminals.iter().any(|t| t.name == name)
+        self.terminals.iter().any(|t| t.name() == name)
     }
 
     pub fn has_non_terminal_with_name(&self, name: &str) -> bool {
@@ -212,7 +218,7 @@ impl Grammar {
             .collect()
     }
 
-    pub fn iter_terminals(&self) -> impl Iterator<Item = (&Terminal, TerminalRef)> {
+    pub fn iter_terminals(&self) -> impl Iterator<Item = (&Box<dyn TerminalLike>, TerminalRef)> {
         self.terminals
             .iter()
             .enumerate()

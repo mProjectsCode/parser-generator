@@ -47,7 +47,7 @@ impl CodeGenerator {
         file.push_line("use std::iter::Peekable;".to_string());
 
         file.push_line(format!("\n// THIS IS A GENERATED PARSER FILE\n"));
-        
+
         for line in self.grammar.repr().split('\n') {
             file.push_line(format!("// {}", line));
         }

@@ -1,4 +1,8 @@
-use super::{epsilon::Epsilon, non_terminal::NonTerminal, terminal::Terminal};
+use super::{
+    epsilon::Epsilon,
+    non_terminal::NonTerminal,
+    terminal::{ByteTerminal, TerminalLike},
+};
 use crate::grammar::{Grammar, StrRepr};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -9,7 +13,7 @@ impl TerminalRef {
         TerminalRef(index)
     }
 
-    pub fn deref<'a>(&self, grammar: &'a Grammar) -> &'a Terminal {
+    pub fn deref<'a>(&self, grammar: &'a Grammar) -> &'a Box<dyn TerminalLike> {
         grammar
             .get_terminal(self.0)
             .expect("index did not point to a terminal")
@@ -102,7 +106,7 @@ impl SymbolRef {
         }
     }
 
-    pub fn unwrap_as_terminal<'a>(&self, grammar: &'a Grammar) -> &'a Terminal {
+    pub fn unwrap_as_terminal<'a>(&self, grammar: &'a Grammar) -> &'a Box<dyn TerminalLike> {
         match &self {
             SymbolRef::Terminal(t_ref) => t_ref.deref(grammar),
             _ => panic!("Expected Terminal, found {:?}", self),

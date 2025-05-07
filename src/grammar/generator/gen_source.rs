@@ -38,34 +38,16 @@ impl GenSource for TerminalRef {
     fn gen_function(&self, grammar: &Grammar, file: &mut CodeFile) -> Result<(), String> {
         let t = self.deref(grammar);
 
-        file.push_line(format!("// Terminal: {}", t.name));
+        file.push_line(format!("// Terminal: {}", t.name()));
         file.push_line(format!("#[inline]"));
         file.push_line(format!(
             "fn _parse_t_{}(input: &mut Peekable<impl Iterator<Item = u8>>) -> Result<{}, String> {{",
             index_to_hex(self.index()),
-            if t.result.is_some() {
-                "String"
-            } else {
-                "()"
-            }
+            t.result_type()
         ));
 
-        for (i, byte) in t.bytes.iter().enumerate() {
-            file.push_line(format!("    let next = input.next();"));
-            file.push_line(format!("    if next == Some({}) {{", byte));
-            if i == t.bytes.len() - 1 {
-                if let Some(ref res) = t.result {
-                    file.push_line(format!("        return Ok(\"{}\".to_string());", res));
-                } else {
-                    file.push_line(format!("        return Ok(());"));
-                }
-            } else {
-                file.push_line(format!("        // no-op"));
-            }
-            file.push_line(format!("    }} else {{"));
-            file.push_line(format!("        return Err(format!(\"Error parsing {}: Expected {:?} but found {{:?}}\", next));", t.name, t.bytes));
-            file.push_line(format!("    }}"));
-        }
+        t.gen_inner_code(*self, file)?;
+
         file.push_line(format!("}}"));
 
         Ok(())
@@ -100,7 +82,7 @@ impl GenSource for NonTerminalRef {
         for rule in grammar.get_rules_for_non_terminal(nt) {
             let predict = predict(rule, grammar);
             file.push_line(format!("    // Rule: {}", rule.repr(grammar)));
-            file.push_line(format!("    // Predict: {}", predict.repr(grammar)));
+            file.push_line(format!("    // Predict: {:?}", predict));
 
             // The predict set for all rules of a non-terminal must be disjoint
             if !predict.is_disjoint(&predicts) {
@@ -116,7 +98,7 @@ impl GenSource for NonTerminalRef {
                 "    if {} {{",
                 predict
                     .iter()
-                    .map(|t| format!("next == Some(&{})", t.deref(grammar).bytes[0]))
+                    .map(|t| format!("next == Some(&{})", t))
                     .collect::<Vec<_>>()
                     .join(" || ")
             ));
